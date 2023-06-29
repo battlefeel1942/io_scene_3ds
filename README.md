@@ -9,7 +9,7 @@ This Blender plugin is an unofficial update of the official 2.79 3DS file import
 1. Clone the repository to the following directory: `3.x\scripts\addons\io_scene_3ds`. Ensure you have the necessary permissions to clone the repository in this directory.
 2. In Blender, navigate to `Edit` -> `Preferences`.
 3. Click on `Add-ons`.
-4. In the Add-ons tab, find `Import-Export: Unofficial Autodesk 3DS Format` and enable the add-on by checking the box next to it.
+4. In the Add-ons tab, find `Import-Export: Autodesk 3DS Format` and enable the add-on by checking the box next to it.
 
 ## Game File Support
 
