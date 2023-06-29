@@ -83,7 +83,7 @@ class Import3DS(bpy.types.Operator, ImportHelper, IO3DSOrientationHelper):
     bl_options = {'UNDO'}
 
     filename_ext = ".3ds"
-    filter_glob = StringProperty(default="*.3ds", options={'HIDDEN'})
+    filter_glob = StringProperty(default="*.3ds;*.i3d", options={'HIDDEN'})
 
     constrain_size = FloatProperty(
         name="Size Constraint",

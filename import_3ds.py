@@ -754,7 +754,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             if child is None:
                 child = bpy.data.objects.new(
                     object_name, None)  # create an empty object
-                SCN.objects.link(child)
+                SCN.collection.objects.link(child)
                 importedObjects.append(child)
 
             object_list.append(child)
@@ -862,7 +862,8 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             if ob.parent is not None:
                 ob.parent = None
         else:
-            if ob.parent != object_list[parent]:
+            # Avoid self-parenting and index out of range
+            if parent < len(object_list) and ob != object_list[parent]:
                 ob.parent = object_list[parent]
 
             # pivot_list[ind] += pivot_list[parent]  # XXX, not sure this is correct, should parent space matrix be applied before combining?
