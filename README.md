@@ -35,7 +35,7 @@ Not yet supported
 
 ## Limitations
 
-Please note that the focus of this plugin is mainly on the importing functionality. The exporting functionality for both 3DS and I3D files is currently under development and may not work as expected.
+Please note that the focus of this plugin is currently on the importing functionality.
 
 Another important issue to note is that importing UV maps from I3D files is currently not functioning correctly. This is a known issue, and we are working to fix it in future updates.
 
