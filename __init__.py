@@ -71,7 +71,7 @@ class Import3DSProperties:
 
 
 class Export3DSProperties:
-    use_selection = BoolProperty(
+    use_selection: BoolProperty(
         name="Selection Only",
         description="Export selected objects only",
         default=False,
