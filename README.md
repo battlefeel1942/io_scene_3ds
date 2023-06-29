@@ -15,15 +15,15 @@ This Blender plugin is an unofficial update of the official 2.79 3DS file import
 
 This extended version of the plugin adds support for game-specific file formats. Specifically, the following games are supported:
 
-- Hidden and Dangerous 1: The plugin allows importing of both Autodesk 3DS and Insanity3D I3D files used in this game into Blender.
+- Hidden and Dangerous 1: The plugin allows importing of Insanity3D I3D files (See Limitations)
 
 More game file formats will be added in the future.
 
 ## Usage
 
-1. To import a 3DS or I3D file, navigate to `File` -> `Import` -> `.3ds/.i3d`.
+1. To import a 3DS or I3D file, navigate to `File` -> `Import` -> `3D Studio (.3ds) EXPERIMENTAL`.
 2. In the file dialog, select the 3DS or I3D file you wish to import.
-3. Click `Import 3DS/I3D`.
+3. Click `Import`.
 
 ## Limitations
 
