@@ -23,9 +23,15 @@ More game file formats will be added in the future.
 
 ## Usage
 
-1. To import a 3DS or I3D file, navigate to `File` -> `Import` -> `3D Studio (.3ds) EXPERIMENTAL`.
-2. In the file dialog, select the 3DS or I3D file you wish to import.
+### Import
+
+1. To import a 3DS file, navigate to `File` -> `Import` -> `3D Studio (.3ds) EXPERIMENTAL`.
+2. In the file dialog, select the 3DS file you wish to import.
 3. Click `Import`.
+
+### Export
+
+Not yet supported
 
 ## Limitations
 
