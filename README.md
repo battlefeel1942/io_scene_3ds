@@ -37,4 +37,4 @@ Contributions are welcome! If you'd like to contribute, please fork the reposito
 
 ## License
 
-This project is licensed under the MIT License. For more details, please see the LICENSE file.
+This project is licensed under the MIT License.
