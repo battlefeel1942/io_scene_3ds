@@ -1,4 +1,4 @@
-# Blender 3DS Importer with I3D Support
+# Blender 3DS Import/Export with I3D Support (Export currently broken)
 
 ## Description
 
