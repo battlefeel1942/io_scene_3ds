@@ -1,4 +1,4 @@
-# Unofficial Update to Autodesk 3DS Import/Export for Blender 3.x
+# Unofficial update to Autodesk 3DS Import/Export for Blender 3.x
 
 ### NOTE: Export is currently broken.
 
