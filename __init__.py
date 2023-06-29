@@ -18,16 +18,14 @@
 
 # <pep8-80 compliant>
 
-from bpy_extras.io_utils import (
-    ImportHelper,
-    ExportHelper,
-    axis_conversion,
-)
-from bpy.props import (
-    BoolProperty,
-    StringProperty,
-)
+
 import bpy
+from bpy.props import BoolProperty, FloatProperty, EnumProperty, StringProperty
+from bpy_extras.io_utils import ImportHelper, ExportHelper, axis_conversion
+
+# Global constants
+EXT_3DS = ".3ds"
+FILTER_GLOB = f"*{EXT_3DS};*.i3d"
 
 bl_info = {
     "name": "Autodesk 3DS format - Community Update",
@@ -51,7 +49,7 @@ if "bpy" in locals():
 
 
 class Import3DSProperties:
-    constrain_size: bpy.props.FloatProperty(
+    constrain_size: FloatProperty(
         name="Size Constraint",
         description="Scale the model by 10 until it reaches the size constraint (0 to disable)",
         min=0.0, max=1000.0,
@@ -59,13 +57,13 @@ class Import3DSProperties:
         default=10.0,
     )
 
-    use_image_search: bpy.props.BoolProperty(
+    use_image_search: BoolProperty(
         name="Image Search",
         description="Search subdirectories for any associated images (Warning, may be slow)",
         default=True,
     )
 
-    use_apply_transform: bpy.props.BoolProperty(
+    use_apply_transform: BoolProperty(
         name="Apply Transform",
         description="Workaround for object transformations importing incorrectly",
         default=True,
@@ -73,7 +71,7 @@ class Import3DSProperties:
 
 
 class OrientationProperties:
-    axis_forward: bpy.props.EnumProperty(
+    axis_forward: EnumProperty(
         name="Forward",
         items=(('X', "X Forward", ""),
                ('Y', "Y Forward", ""),
@@ -84,7 +82,7 @@ class OrientationProperties:
         default='Y',
     )
 
-    axis_up: bpy.props.EnumProperty(
+    axis_up: EnumProperty(
         name="Up",
         items=(('X', "X Up", ""),
                ('Y', "Y Up", ""),
@@ -102,8 +100,11 @@ class Import3DS(bpy.types.Operator, ImportHelper, Import3DSProperties, Orientati
     bl_label = 'Import'
     bl_options = {'UNDO'}
 
-    filename_ext = ".3ds"
-    filter_glob = StringProperty(default="*.3ds;*.i3d", options={'HIDDEN'})
+    filename_ext = EXT_3DS
+    filter_glob = StringProperty(
+        default=FILTER_GLOB,
+        options={'HIDDEN'},
+    )
 
     def execute(self, context):
         from . import import_3ds
@@ -127,9 +128,9 @@ class Export3DS(bpy.types.Operator, ExportHelper, OrientationProperties):
     bl_idname = "export_scene.autodesk_3ds"
     bl_label = 'Export'
 
-    filename_ext = ".3ds"
+    filename_ext = EXT_3DS
     filter_glob = StringProperty(
-        default="*.3ds",
+        default=FILTER_GLOB,
         options={'HIDDEN'},
     )
 
