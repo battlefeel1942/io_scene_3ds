@@ -361,13 +361,15 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                         v1, v2, v3 = v3, v1, v2
 
                     # New debug print
+                    """
                     print(
                         f"Face index: {fidx}, Face: {face}, Vertices: {v1, v2, v3}")
+                    """
 
                     uv1 = contextMeshUV[v1 * 2: (v1 * 2) + 2]
                     uv2 = contextMeshUV[v2 * 2: (v2 * 2) + 2]
                     uv3 = contextMeshUV[v3 * 2: (v3 * 2) + 2]
-                    print(f"UVs: {uv1, uv2, uv3}")  # New debug print
+                    # print(f"UVs: {uv1, uv2, uv3}")  # New debug print
 
                     uvl[pl.loop_start].uv = uv1
                     uvl[pl.loop_start + 1].uv = uv2
@@ -467,6 +469,8 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
         # read the next chunk
         # print 'reading a chunk'
         read_chunk(file, new_chunk)
+
+        print(str(hex(new_chunk.ID)) + " - " + str(int(new_chunk.length)))
 
         # is it a Version chunk?
         if new_chunk.ID == VERSION:
