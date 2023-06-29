@@ -25,7 +25,6 @@ from bpy_extras.io_utils import (
 )
 from bpy.props import (
     BoolProperty,
-    FloatProperty,
     StringProperty,
 )
 import bpy
@@ -51,8 +50,29 @@ if "bpy" in locals():
             importlib.reload(locals()[module])
 
 
-class IO3DSOrientationHelper:
-    """Orientation helper class for import/export operators."""
+class Import3DSProperties:
+    constrain_size: bpy.props.FloatProperty(
+        name="Size Constraint",
+        description="Scale the model by 10 until it reaches the size constraint (0 to disable)",
+        min=0.0, max=1000.0,
+        soft_min=0.0, soft_max=1000.0,
+        default=10.0,
+    )
+
+    use_image_search: bpy.props.BoolProperty(
+        name="Image Search",
+        description="Search subdirectories for any associated images (Warning, may be slow)",
+        default=True,
+    )
+
+    use_apply_transform: bpy.props.BoolProperty(
+        name="Apply Transform",
+        description="Workaround for object transformations importing incorrectly",
+        default=True,
+    )
+
+
+class OrientationProperties:
     axis_forward: bpy.props.EnumProperty(
         name="Forward",
         items=(('X', "X Forward", ""),
@@ -76,7 +96,7 @@ class IO3DSOrientationHelper:
     )
 
 
-class Import3DS(bpy.types.Operator, ImportHelper, IO3DSOrientationHelper):
+class Import3DS(bpy.types.Operator, ImportHelper, Import3DSProperties, OrientationProperties):
     """Import from 3DS file format (.3ds)"""
     bl_idname = "import_scene.autodesk_3ds"
     bl_label = 'Import'
@@ -84,27 +104,6 @@ class Import3DS(bpy.types.Operator, ImportHelper, IO3DSOrientationHelper):
 
     filename_ext = ".3ds"
     filter_glob = StringProperty(default="*.3ds;*.i3d", options={'HIDDEN'})
-
-    constrain_size = FloatProperty(
-        name="Size Constraint",
-        description="Scale the model by 10 until it reaches the "
-        "size constraint (0 to disable)",
-        min=0.0, max=1000.0,
-        soft_min=0.0, soft_max=1000.0,
-        default=10.0,
-    )
-    use_image_search = BoolProperty(
-        name="Image Search",
-        description="Search subdirectories for any associated images "
-        "(Warning, may be slow)",
-        default=True,
-    )
-    use_apply_transform = BoolProperty(
-        name="Apply Transform",
-        description="Workaround for object transformations "
-        "importing incorrectly",
-        default=True,
-    )
 
     def execute(self, context):
         from . import import_3ds
@@ -117,12 +116,13 @@ class Import3DS(bpy.types.Operator, ImportHelper, IO3DSOrientationHelper):
         global_matrix = axis_conversion(from_forward=self.axis_forward,
                                         from_up=self.axis_up,
                                         ).to_4x4()
+
         keywords["global_matrix"] = global_matrix
 
         return import_3ds.load(self, context, **keywords)
 
 
-class Export3DS(bpy.types.Operator, ExportHelper, IO3DSOrientationHelper):
+class Export3DS(bpy.types.Operator, ExportHelper, OrientationProperties):
     """Export to 3DS file format (.3ds)"""
     bl_idname = "export_scene.autodesk_3ds"
     bl_label = 'Export'
