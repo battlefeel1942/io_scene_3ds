@@ -17,7 +17,7 @@ This Blender plugin is an unofficial update of the official 2.79 3DS file import
 
 This extended version of the plugin adds support for game-specific file formats. Specifically, the following games are supported:
 
-- Hidden and Dangerous 1: The plugin allows importing of Insanity3D I3D files (See Limitations)
+- Hidden and Dangerous 1: The plugin allows importing of Insanity3D (.i3d) files (See Limitations)
 
 More game file formats will be added in the future.
 
