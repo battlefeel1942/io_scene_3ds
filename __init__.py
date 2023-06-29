@@ -97,16 +97,11 @@ class Import3DS(bpy.types.Operator, ImportHelper, Import3DSProperties, Orientati
     def execute(self, context):
         from . import import_3ds
 
-        keywords = self.as_keywords(ignore=("axis_forward",
-                                            "axis_up",
-                                            "filter_glob",
-                                            ))
+        keywords = self.as_keywords(
+            ignore=("axis_forward", "axis_up", "filter_glob"))
 
-        global_matrix = axis_conversion(from_forward=self.axis_forward,
-                                        from_up=self.axis_up,
-                                        ).to_4x4()
-
-        keywords["global_matrix"] = global_matrix
+        keywords["global_matrix"] = axis_conversion(
+            from_forward=self.axis_forward, from_up=self.axis_up).to_4x4()
 
         return import_3ds.load(self, context, **keywords)
 
@@ -124,27 +119,22 @@ class Export3DS(bpy.types.Operator, ExportHelper, Export3DSProperties, Orientati
     def execute(self, context):
         from . import export_3ds
 
-        keywords = self.as_keywords(ignore=("axis_forward",
-                                            "axis_up",
-                                            "filter_glob",
-                                            "check_existing",
-                                            ))
-        global_matrix = axis_conversion(to_forward=self.axis_forward,
-                                        to_up=self.axis_up,
-                                        ).to_4x4()
-        keywords["global_matrix"] = global_matrix
+        keywords = self.as_keywords(
+            ignore=("axis_forward", "axis_up", "filter_glob", "check_existing"))
+
+        keywords["global_matrix"] = axis_conversion(
+            to_forward=self.axis_forward, to_up=self.axis_up).to_4x4()
 
         return export_3ds.save(self, context, **keywords)
 
 
 def menu_func_export(self, context):
-    self.layout.operator(Export3DS.bl_idname,
-                         text="3D Studio (.3ds) BROKEN")
+    self.layout.operator(Export3DS.bl_idname, text="3D Studio (.3ds) BROKEN")
 
 
 def menu_func_import(self, context):
-    self.layout.operator(Import3DS.bl_idname,
-                         text="3D Studio (.3ds) EXPERIMENTAL")
+    self.layout.operator(
+        Import3DS.bl_idname, text="3D Studio (.3ds) IN DEVELOPMENT ¯\_(ツ)_/¯")
 
 
 def register():
