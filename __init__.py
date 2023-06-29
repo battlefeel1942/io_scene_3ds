@@ -31,12 +31,12 @@ from bpy.props import (
 import bpy
 
 bl_info = {
-    "name": "Autodesk 3DS format",
+    "name": "Autodesk 3DS format - Community Update",
     "author": "Bob Holcomb, Campbell Barton, github:Battlefeel1942",
+    "version": (0, 1, 0),
     "blender": (3, 0, 0),
     "location": "File > Import-Export",
-    "description": "Import-Export 3DS, meshes, uvs, materials, textures, "
-                   "cameras & lamps",
+    "description": "Import-Export 3DS, meshes, uvs, materials, textures, cameras & lamps",
     "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
                 "Scripts/Import-Export/Autodesk_3DS",
@@ -45,10 +45,10 @@ bl_info = {
 
 if "bpy" in locals():
     import importlib
-    if "import_3ds" in locals():
-        importlib.reload(import_3ds)
-    if "export_3ds" in locals():
-        importlib.reload(export_3ds)
+    modules = ['import_3ds', 'export_3ds']
+    for module in modules:
+        if module in locals():
+            importlib.reload(locals()[module])
 
 
 class IO3DSOrientationHelper:
