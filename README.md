@@ -1,4 +1,6 @@
-# Unofficial Update to Blender 3DS Import/Export for Blender 3.x
+# Unofficial Update to Blender 3DS Import for Blender 3.x
+
+### Export is currently broken.
 
 ## Description
 
