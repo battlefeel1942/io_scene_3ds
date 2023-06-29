@@ -32,7 +32,7 @@ import bpy
 
 bl_info = {
     "name": "Autodesk 3DS format",
-    "author": "Bob Holcomb, Campbell Barton",
+    "author": "Bob Holcomb, Campbell Barton, github:Battlefeel1942",
     "blender": (3, 0, 0),
     "location": "File > Import-Export",
     "description": "Import-Export 3DS, meshes, uvs, materials, textures, "
@@ -40,7 +40,7 @@ bl_info = {
     "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
                 "Scripts/Import-Export/Autodesk_3DS",
-    "support": 'OFFICIAL',
+    "support": 'COMMUNITY',
     "category": "Import-Export"}
 
 if "bpy" in locals():
