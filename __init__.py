@@ -70,6 +70,14 @@ class Import3DSProperties:
     )
 
 
+class Export3DSProperties:
+    use_selection = BoolProperty(
+        name="Selection Only",
+        description="Export selected objects only",
+        default=False,
+    )
+
+
 class OrientationProperties:
     axis_forward: EnumProperty(
         name="Forward",
@@ -95,7 +103,6 @@ class OrientationProperties:
 
 
 class Import3DS(bpy.types.Operator, ImportHelper, Import3DSProperties, OrientationProperties):
-    """Import from 3DS file format (.3ds)"""
     bl_idname = "import_scene.autodesk_3ds"
     bl_label = 'Import'
     bl_options = {'UNDO'}
@@ -123,8 +130,7 @@ class Import3DS(bpy.types.Operator, ImportHelper, Import3DSProperties, Orientati
         return import_3ds.load(self, context, **keywords)
 
 
-class Export3DS(bpy.types.Operator, ExportHelper, OrientationProperties):
-    """Export to 3DS file format (.3ds)"""
+class Export3DS(bpy.types.Operator, ExportHelper, Export3DSProperties, OrientationProperties):
     bl_idname = "export_scene.autodesk_3ds"
     bl_label = 'Export'
 
@@ -132,12 +138,6 @@ class Export3DS(bpy.types.Operator, ExportHelper, OrientationProperties):
     filter_glob = StringProperty(
         default=FILTER_GLOB,
         options={'HIDDEN'},
-    )
-
-    use_selection = BoolProperty(
-        name="Selection Only",
-        description="Export selected objects only",
-        default=False,
     )
 
     def execute(self, context):
