@@ -134,7 +134,7 @@ def menu_func_export(self, context):
 
 def menu_func_import(self, context):
     self.layout.operator(
-        Import3DS.bl_idname, text="3D Studio (.3ds) IN DEVELOPMENT ¯\_(ツ)_/¯")
+        Import3DS.bl_idname, text="3D Studio (.3ds) IN DEVELOPMENT")
 
 
 def register():
