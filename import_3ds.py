@@ -30,6 +30,8 @@ import bpy
 import mathutils
 
 from . import data_structure_3ds
+from . import helper_functions
+
 
 BOUNDS_3DS = []
 object_dictionary = {}
@@ -778,20 +780,14 @@ def load_3ds(filepath,
              APPLY_MATRIX=True,
              global_matrix=None):
 
-    # Deselect all other objects
-    for obj in SCN.objects:
-        obj.select_set(False)
-
     print("importing 3DS: %r..." % (filepath), end="")
-
-    if bpy.ops.object.select_all.poll():
-        bpy.ops.object.select_all(action='DESELECT')
-
     time1 = time.perf_counter()
 
     current_chunk = Chunk()
-
     file = open(filepath, 'rb')
+
+    # Deselect all other objects
+    helper_functions.deselect_all_objects()
 
     # here we go!
     # print 'reading the first chunk'
