@@ -32,12 +32,12 @@ import mathutils
 from . import data_structure_3ds
 
 BOUNDS_3DS = []
-
-global scn
-scn = None
-
 object_dictionary = {}
 object_matrix = {}
+
+
+global SCN
+SCN = bpy.context.scene
 
 
 class Chunk:
@@ -777,11 +777,10 @@ def load_3ds(filepath,
              IMAGE_SEARCH=True,
              APPLY_MATRIX=True,
              global_matrix=None):
-    global SCN
 
-    # XXX
-# 	if BPyMessages.Error_NoFile(filepath):
-# 		return
+    # Deselect all other objects
+    for obj in SCN.objects:
+        obj.select_set(False)
 
     print("importing 3DS: %r..." % (filepath), end="")
 
@@ -789,7 +788,6 @@ def load_3ds(filepath,
         bpy.ops.object.select_all(action='DESELECT')
 
     time1 = time.perf_counter()
-# 	time1 = Blender.sys.time()
 
     current_chunk = Chunk()
 
@@ -811,27 +809,12 @@ def load_3ds(filepath,
 
     # IMAGE_SEARCH
 
-    # fixme, make unglobal, clear in case
-    object_dictionary.clear()
-    object_matrix.clear()
-
-    scn = context.scene
-# 	scn = bpy.data.scenes.active
-    SCN = scn
-# 	SCN_OBJECTS = scn.objects
-# 	SCN_OBJECTS.selected = [] # de select all
-
     importedObjects = []  # Fill this list with objects
     process_next_chunk(file, current_chunk, importedObjects, IMAGE_SEARCH)
 
-    # fixme, make unglobal
+    # fixme, make unglobal, clear in case
     object_dictionary.clear()
     object_matrix.clear()
-
-    # Link the objects into this scene.
-    # Layers = scn.Layers
-
-    # REMOVE DUMMYVERT, - remove this in the next release when blenders internal are fixed.
 
     if APPLY_MATRIX:
         for ob in importedObjects:
@@ -839,7 +822,6 @@ def load_3ds(filepath,
                 me = ob.data
                 me.transform(ob.matrix_local.inverted())
 
-    # print(importedObjects)
     if global_matrix:
         for ob in importedObjects:
             if ob.parent is None:
@@ -848,32 +830,6 @@ def load_3ds(filepath,
     for ob in importedObjects:
         context.view_layer.objects.active = ob
         ob.select_set(True)
-
-    # Done DUMMYVERT
-    """
-    if IMPORT_AS_INSTANCE:
-        name = filepath.split('\\')[-1].split('/')[-1]
-        # Create a group for this import.
-        group_scn = Scene.New(name)
-        for ob in importedObjects:
-            group_scn.link(ob) # dont worry about the layers
-
-        grp = Blender.Group.New(name)
-        grp.objects = importedObjects
-
-        grp_ob = Object.New('Empty', name)
-        grp_ob.enableDupGroup = True
-        grp_ob.DupGroup = grp
-        scn.link(grp_ob)
-        grp_ob.Layers = Layers
-        grp_ob.sel = 1
-    else:
-        # Select all imported objects.
-        for ob in importedObjects:
-            scn.link(ob)
-            ob.Layers = Layers
-            ob.sel = 1
-    """
 
     layer = bpy.context.view_layer
     layer.update()
