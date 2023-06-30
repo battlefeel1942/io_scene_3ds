@@ -110,9 +110,14 @@ def skip_to_end(file, skip_chunk):
 
 
 def add_texture_to_material(image, texture, scale, offset, extension, material, mapto):
-    # print('assigning %s to %s' % (texture, material))
+    mapto_mapping = {
+        'COLOR': 'Base Color',
+        'SPECULARITY': 'Specular',
+        'ALPHA': 'Alpha',
+        'NORMAL': 'Normal'
+    }
 
-    if mapto not in {'COLOR', 'SPECULARITY', 'ALPHA', 'NORMAL'}:
+    if mapto not in mapto_mapping.keys():
         print(
             "\tError: Cannot map to %r\n\tassuming diffuse color. modify material %r later." %
             (mapto, material.name)
@@ -122,30 +127,37 @@ def add_texture_to_material(image, texture, scale, offset, extension, material, 
     if image:
         texture.image = image
 
-    mtex = material.texture_slots.add()
-    mtex.texture = texture
-    mtex.texture_coords = 'UV'
-    mtex.use_map_color_diffuse = False
-    mtex.scale = (scale[0], scale[1], 1.0)
-    mtex.offset = (offset[0], offset[1], 0.0)
+    material.use_nodes = True
+    bsdf = material.node_tree.nodes["Principled BSDF"]
 
-    texture.extension = 'REPEAT'
+    tex_image = material.node_tree.nodes.new('ShaderNodeTexImage')
+    tex_image.image = texture.image
+    tex_image.location = (-300, 300)
+
+    # Add mapping node and texture coordinate node
+    tex_coord = material.node_tree.nodes.new('ShaderNodeTexCoord')
+    mapping = material.node_tree.nodes.new('ShaderNodeMapping')
+
+    # Connect texture coordinate to mapping input
+    material.node_tree.links.new(
+        mapping.inputs['Vector'], tex_coord.outputs['UV'])
+
+    # Connect mapping output to image texture input
+    material.node_tree.links.new(
+        tex_image.inputs['Vector'], mapping.outputs['Vector'])
+
+    # Set the scale values
+    mapping.inputs['Scale'].default_value[0] = scale[0]
+    mapping.inputs['Scale'].default_value[1] = scale[1]
+
+    material.node_tree.links.new(
+        bsdf.inputs[mapto_mapping[mapto]], tex_image.outputs['Color'])
+
     if extension == 'mirror':
-        # 3DS mirror flag can be emulated by these settings (at least so it seems)
-        texture.repeat_x = texture.repeat_y = 2
-        texture.use_mirror_x = texture.use_mirror_y = True
+        # To implement mirror or decal extension, additional logic is required.
+        pass
     elif extension == 'decal':
-        # 3DS' decal mode maps best to Blenders CLIP
-        texture.extension = 'CLIP'
-
-    if mapto == 'COLOR':
-        mtex.use_map_color_diffuse = True
-    elif mapto == 'SPECULARITY':
-        mtex.use_map_specular = True
-    elif mapto == 'ALPHA':
-        mtex.use_map_alpha = True
-    elif mapto == 'NORMAL':
-        mtex.use_map_normal = True
+        pass
 
 
 def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
@@ -229,7 +241,13 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                 if uv_faces and img:
                     for fidx in faces:
                         bmesh.polygons[fidx].material_index = mat_idx
-                        uv_faces[fidx].image = img
+                        # add texture to the material instead of UV face
+                        if bmat:
+                            bmat.use_nodes = True
+                            nodes = bmat.node_tree.nodes
+                            tex_image = nodes.new('ShaderNodeTexImage')
+                            tex_image.image = img
+                            nodes['Principled BSDF'].inputs[0].default_value = nodes['Image Texture'].outputs[0].default_value
                 else:
                     for fidx in faces:
                         bmesh.polygons[fidx].material_index = mat_idx
@@ -240,20 +258,12 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                     face = myContextMesh_facels[fidx]
                     v1, v2, v3 = face
 
-                    # eekadoodle
                     if v3 == 0:
                         v1, v2, v3 = v3, v1, v2
-
-                    # New debug print
-                    """
-                    print(
-                        f"Face index: {fidx}, Face: {face}, Vertices: {v1, v2, v3}")
-                    """
 
                     uv1 = contextMeshUV[v1 * 2: (v1 * 2) + 2]
                     uv2 = contextMeshUV[v2 * 2: (v2 * 2) + 2]
                     uv3 = contextMeshUV[v3 * 2: (v3 * 2) + 2]
-                    # print(f"UVs: {uv1, uv2, uv3}")  # New debug print
 
                     uvl[pl.loop_start].uv = uv1
                     uvl[pl.loop_start + 1].uv = uv2
