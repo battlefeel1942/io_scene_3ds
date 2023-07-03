@@ -22,7 +22,6 @@ def process_next_object_chunk(file, previous_chunk):
     new_chunk = Chunk3DS()
 
     while (previous_chunk.bytes_read < previous_chunk.length):
-        # read the next chunk
         helper_functions.read_chunk(file, new_chunk)
 
 
@@ -41,17 +40,13 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
     contextLamp = [None, None]  # object, Data
     contextMaterial = None
     contextMatrix_rot = None  # Blender.mathutils.Matrix(); contextMatrix.identity()
-    # contextMatrix_tx = None # Blender.mathutils.Matrix(); contextMatrix.identity()
     contextMesh_vertls = None  # flat array: (verts * 3)
     contextMesh_facels = None
     contextMeshMaterials = []  # (matname, [face_idxs])
     contextMeshUV = None  # flat array (verts * 2)
 
-    TEXTURE_DICT = {}
-    MATDICT = {}
-# 	TEXMODE = Mesh.FaceModes['TEX']
-
-    # Localspace variable names, faster.
+    textureDict = {}
+    materialDic = {}
 
     # only init once
     object_list = []  # for hierarchy
@@ -70,7 +65,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                 bmesh) if bmesh.polygons and contextMeshUV else None
 
             helper_functions.assign_material(
-                bmesh, myContextMeshMaterials, MATDICT, TEXTURE_DICT)
+                bmesh, myContextMeshMaterials, materialDic, textureDict)
 
             if uv_faces:
                 helper_functions.set_uv(
@@ -92,11 +87,6 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
     temp_chunk = Chunk3DS()
 
     CreateBlenderObject = False
-
-    def read_float_color(temp_chunk):
-        temp_data = file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT)
-        temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT
-        return [float(col) for col in struct.unpack('<3f', temp_data)]
 
     def read_float(temp_chunk):
         temp_data = file.read(localspace_variable_names.STRUCT_SIZE_FLOAT)
@@ -127,7 +117,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             if temp_chunk.ID == data_structure_3ds.MAT_MAP_FILEPATH:
                 texture_name, read_str_len = helper_functions.read_string(file)
 
-                img = TEXTURE_DICT[contextMaterial.name] = load_image(
+                img = textureDict[contextMaterial.name] = load_image(
                     texture_name, dirname)
                 # plus one for the null character that gets removed
                 temp_chunk.bytes_read += read_str_len
@@ -232,12 +222,12 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             new_chunk.bytes_read += read_str_len
 
             contextMaterial.name = material_name.rstrip()  # remove trailing  whitespace
-            MATDICT[material_name] = contextMaterial
+            materialDic[material_name] = contextMaterial
 
         elif new_chunk.ID == data_structure_3ds.MAT_AMBIENT:
             helper_functions.read_chunk(file, temp_chunk)
             if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
-                color = read_float_color(temp_chunk)
+                color = helper_functions.read_float_color(file, temp_chunk)
                 contextMaterial.diffuse_color = color + \
                     [1.0]  # Adding alpha value as list
             elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
@@ -259,7 +249,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
         elif new_chunk.ID == data_structure_3ds.MAT_DIFFUSE:
             helper_functions.read_chunk(file, temp_chunk)
             if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
-                color = read_float_color(temp_chunk)
+                color = helper_functions.read_float_color(file, temp_chunk)
                 contextMaterial.diffuse_color = color + [1.0]  # Add alpha
             elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
                 color = read_byte_color(temp_chunk)
@@ -279,7 +269,8 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             # print 'elif new_chunk.ID == MAT_SPECULAR:'
             helper_functions.read_chunk(file, temp_chunk)
             if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
-                contextMaterial.specular_color = read_float_color(temp_chunk)
+                contextMaterial.specular_color = helper_functions.read_float_color(
+                    file, temp_chunk)
             elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
                 contextMaterial.specular_color = read_byte_color(temp_chunk)
             else:
@@ -429,8 +420,8 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
 
         elif (new_chunk.ID == data_structure_3ds.MAT_MAP_FILEPATH):
             texture_name, read_str_len = helper_functions.read_string(file)
-            if contextMaterial.name not in TEXTURE_DICT:
-                TEXTURE_DICT[contextMaterial.name] = load_image(
+            if contextMaterial.name not in textureDict:
+                textureDict[contextMaterial.name] = load_image(
                     texture_name, dirname, place_holder=False, recursive=IMAGE_SEARCH)
 
             # plus one for the null character that gets removed

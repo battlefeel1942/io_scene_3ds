@@ -1,6 +1,8 @@
 import bpy
 import struct
 
+from . import localspace_variable_names
+
 
 def deselect_all_objects():
     """
@@ -259,3 +261,9 @@ def read_string(file):
             break
         s.append(c)
     return str(b''.join(s), "utf-8", "replace"), len(s) + 1
+
+
+def read_float_color(file, temp_chunk):
+    temp_data = file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT)
+    temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT
+    return [float(col) for col in struct.unpack('<3f', temp_data)]
