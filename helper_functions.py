@@ -1,4 +1,5 @@
 import bpy
+import struct
 
 
 def deselect_all_objects():
@@ -222,3 +223,39 @@ def add_texture_to_material(image, texture, scale, offset, extension, material, 
         pass
     elif extension == 'decal':
         pass
+
+
+def read_chunk(file, chunk):
+    """
+    Reads a chunk of data from the given file.
+
+    Args:
+    file (file): File to read data from.
+    chunk (Chunk): Chunk object that holds the ID, length, and bytes read of the data chunk.
+
+    Returns: None
+    """
+    temp_data = file.read(struct.calcsize(chunk.binary_format))
+    data = struct.unpack(chunk.binary_format, temp_data)
+    chunk.ID = data[0]
+    chunk.length = data[1]
+    chunk.bytes_read = 6  # update the bytes read function
+
+
+def read_string(file):
+    """
+    Reads a null-terminated string from a file.
+
+    Args:
+    file (file): File to read the string from.
+
+    Returns:
+    tuple: A tuple (string, length), where 'string' is the read string and 'length' is the length of the string plus one for the null character.
+    """
+    s = []
+    while True:
+        c = file.read(1)
+        if c == b'\x00':
+            break
+        s.append(c)
+    return str(b''.join(s), "utf-8", "replace"), len(s) + 1
