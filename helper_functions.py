@@ -264,6 +264,127 @@ def read_string(file):
 
 
 def read_float_color(file, temp_chunk):
-    temp_data = file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT)
-    temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT
+    """
+    Reads a three float color value from a file.
+
+    Args:
+    file (file): File to read the float color from.
+    temp_chunk (Chunk3DS): The current chunk being processed.
+
+    Returns:
+    list: A list of three floats representing the color.
+    """
+    data_size = localspace_variable_names.STRUCT_SIZE_3FLOAT
+    temp_data = file.read(data_size)
+    temp_chunk.bytes_read += data_size
     return [float(col) for col in struct.unpack('<3f', temp_data)]
+
+
+def skip_to_end(file, skip_chunk):
+    """
+    Skips to the end of a chunk in a file.
+
+    Args:
+    file (file): File to skip through.
+    skip_chunk (Chunk3DS): The chunk to skip.
+    """
+    buffer_size = skip_chunk.length - skip_chunk.bytes_read
+    file.read(buffer_size)
+    skip_chunk.bytes_read += buffer_size
+
+
+def read_float(file, temp_chunk):
+    """
+    Reads a float from a file.
+
+    Args:
+    file (file): File to read the float from.
+    temp_chunk (Chunk3DS): The current chunk being processed.
+
+    Returns:
+    float: The float read from the file.
+    """
+    data_size = localspace_variable_names.STRUCT_SIZE_FLOAT
+    temp_data = file.read(data_size)
+    temp_chunk.bytes_read += data_size
+    return struct.unpack('<f', temp_data)[0]
+
+
+def read_short(file, temp_chunk):
+    """
+    Reads an unsigned short from a file.
+
+    Args:
+    file (file): File to read the short from.
+    temp_chunk (Chunk3DS): The current chunk being processed.
+
+    Returns:
+    int: The unsigned short read from the file.
+    """
+    data_size = localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT
+    temp_data = file.read(data_size)
+    temp_chunk.bytes_read += data_size
+    return struct.unpack('<H', temp_data)[0]
+
+
+def read_byte_color(file, temp_chunk):
+    """
+    Reads a byte-based color from a file and converts it to a float-based color.
+
+    Args:
+    file (file): File to read the color from.
+    temp_chunk (Chunk3DS): The current chunk being processed.
+
+    Returns:
+    list: A list of three floats representing the color.
+    """
+    temp_data = file.read(struct.calcsize('3B'))
+    temp_chunk.bytes_read += 3
+    return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
+
+
+def read_int(file, temp_chunk):
+    """
+    Reads an integer from a file.
+
+    Args:
+    file (file): File to read the integer from.
+    temp_chunk (Chunk3DS): The current chunk being processed.
+
+    Returns:
+    int: The integer read from the file.
+    """
+    data_size = struct.calcsize('I')
+    temp_data = file.read(data_size)
+    temp_chunk.bytes_read += data_size
+    return struct.unpack('<I', temp_data)[0]
+
+
+def create_lamp(file, contextLamp, new_chunk, SCN, importedObjects):
+    """
+    Creates a new lamp and sets its location.
+
+    Args:
+    contextLamp (list): Contextual information about the lamp.
+    new_chunk (Chunk3DS): The chunk containing the lamp data.
+    SCN (bpy.types.Scene): The current Blender scene.
+    importedObjects (list): List of imported objects.
+
+    Returns:
+    tuple: Updated contextLamp and new_chunk objects.
+    """
+    temp_data = file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT)
+    x, y, z = struct.unpack('<3f', temp_data)
+    new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT
+
+    # Create a new lamp data and object, and link the object to the scene
+    lamp_data = bpy.data.lamps.new("Lamp", 'POINT')
+    lamp_object = bpy.data.objects.new("Lamp", lamp_data)
+    SCN.collection.objects.link(lamp_object)
+
+    importedObjects.append(lamp_object)
+
+    # Set the lamp location
+    lamp_object.location = x, y, z
+
+    return [lamp_object, lamp_data], new_chunk

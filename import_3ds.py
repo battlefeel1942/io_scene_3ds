@@ -15,27 +15,13 @@ from .chunk_3ds import Chunk3DS
 BOUNDS_3DS = []
 OBJECT_DICTIONARY = {}
 OBJECT_MATRIX = {}
+
 SCN = bpy.context.scene
-
-
-def process_next_object_chunk(file, previous_chunk):
-    new_chunk = Chunk3DS()
-
-    while (previous_chunk.bytes_read < previous_chunk.length):
-        helper_functions.read_chunk(file, new_chunk)
-
-
-def skip_to_end(file, skip_chunk):
-    buffer_size = skip_chunk.length - skip_chunk.bytes_read
-    binary_format = "%ic" % buffer_size
-    file.read(struct.calcsize(binary_format))
-    skip_chunk.bytes_read += buffer_size
 
 
 def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
     from bpy_extras.image_utils import load_image
 
-    # print previous_chunk.bytes_read, 'BYTES READ'
     contextObName = None
     contextLamp = [None, None]  # object, Data
     contextMaterial = None
@@ -45,8 +31,8 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
     contextMeshMaterials = []  # (matname, [face_idxs])
     contextMeshUV = None  # flat array (verts * 2)
 
-    textureDict = {}
-    materialDic = {}
+    textureDictionary = {}
+    materialDictionary = {}
 
     # only init once
     object_list = []  # for hierarchy
@@ -65,7 +51,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                 bmesh) if bmesh.polygons and contextMeshUV else None
 
             helper_functions.assign_material(
-                bmesh, myContextMeshMaterials, materialDic, textureDict)
+                bmesh, myContextMeshMaterials, materialDictionary, textureDictionary)
 
             if uv_faces:
                 helper_functions.set_uv(
@@ -88,52 +74,34 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
 
     CreateBlenderObject = False
 
-    def read_float(temp_chunk):
-        temp_data = file.read(localspace_variable_names.STRUCT_SIZE_FLOAT)
-        temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_FLOAT
-        return struct.unpack('<f', temp_data)[0]
-
-    def read_short(temp_chunk):
-        temp_data = file.read(
-            localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT)
-        temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT
-        return struct.unpack('<H', temp_data)[0]
-
-    def read_byte_color(temp_chunk):
-        temp_data = file.read(struct.calcsize('3B'))
-        temp_chunk.bytes_read += 3
-        # data [0,1,2] == rgb
-        return [float(col) / 255 for col in struct.unpack('<3B', temp_data)]
-
     def read_texture(new_chunk, temp_chunk, name, mapto):
         new_texture = bpy.data.textures.new(name, type='IMAGE')
 
         u_scale, v_scale, u_offset, v_offset = 1.0, 1.0, 0.0, 0.0
         extension = 'wrap'
         while (new_chunk.bytes_read < new_chunk.length):
-            # print 'MAT_TEXTURE_MAP..while', new_chunk.bytes_read, new_chunk.length
             helper_functions.read_chunk(file, temp_chunk)
 
             if temp_chunk.ID == data_structure_3ds.MAT_MAP_FILEPATH:
                 texture_name, read_str_len = helper_functions.read_string(file)
 
-                img = textureDict[contextMaterial.name] = load_image(
+                img = textureDictionary[contextMaterial.name] = load_image(
                     texture_name, dirname)
                 # plus one for the null character that gets removed
                 temp_chunk.bytes_read += read_str_len
 
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_USCALE:
-                u_scale = read_float(temp_chunk)
+                u_scale = helper_functions.read_float(temp_chunk)
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_VSCALE:
-                v_scale = read_float(temp_chunk)
+                v_scale = helper_functions.read_float(temp_chunk)
 
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_UOFFSET:
-                u_offset = read_float(temp_chunk)
+                u_offset = helper_functions.read_float(temp_chunk)
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_VOFFSET:
-                v_offset = read_float(temp_chunk)
+                v_offset = helper_functions.read_float(temp_chunk)
 
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_TILING:
-                tiling = read_short(temp_chunk)
+                tiling = helper_functions.read_short(file, temp_chunk)
                 if tiling & 0x2:
                     extension = 'mirror'
                 elif tiling & 0x10:
@@ -142,7 +110,7 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             elif temp_chunk.ID == data_structure_3ds.MAT_MAP_ANG:
                 print("\nwarning: ignoring UV rotation")
 
-            skip_to_end(file, temp_chunk)
+            helper_functions.skip_to_end(file, temp_chunk)
             new_chunk.bytes_read += temp_chunk.bytes_read
 
         # add the map to the material in the right channel
@@ -159,21 +127,11 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
         # print 'reading a chunk'
         helper_functions.read_chunk(file, new_chunk)
 
-        print(str(hex(new_chunk.ID)) + " - " + str(int(new_chunk.length)))
-
-        # is it a Version chunk?
         if new_chunk.ID == data_structure_3ds.VERSION:
-            # print 'if new_chunk.ID == VERSION:'
-            # print 'found a VERSION chunk'
-            # read in the version of the file
-            # it's an unsigned short (H)
-            temp_data = file.read(struct.calcsize('I'))
-            version = struct.unpack('<I', temp_data)[0]
-            new_chunk.bytes_read += 4  # read the 4 bytes for the version number
-            # this loader works with version 3 and below, but may not with 4 and above
+            version = helper_functions.read_int(file, new_chunk)
             if version > 3:
                 print(
-                    '\tNon-Fatal Error:  Version greater than 3, may not load correctly: ', version)
+                    '\tNon-Fatal Error: Version greater than 3, may not load correctly:', version)
 
         # is it an object info chunk?
         elif new_chunk.ID == data_structure_3ds.OBJECTINFO:
@@ -206,36 +164,27 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
 
         # is it a material chunk?
         elif new_chunk.ID == data_structure_3ds.MATERIAL:
-
-            # print("read material")
-
-            # print 'elif new_chunk.ID == MATERIAL:'
             contextMaterial = bpy.data.materials.new('Material')
 
         elif new_chunk.ID == data_structure_3ds.MAT_NAME:
-            # print 'elif new_chunk.ID == MAT_NAME:'
             material_name, read_str_len = helper_functions.read_string(file)
+            material_name = material_name.rstrip()
 
-# 			print("material name", material_name)
-
-            # plus one for the null character that ended the string
+            contextMaterial.name = material_name
+            materialDictionary[material_name] = contextMaterial
             new_chunk.bytes_read += read_str_len
-
-            contextMaterial.name = material_name.rstrip()  # remove trailing  whitespace
-            materialDic[material_name] = contextMaterial
 
         elif new_chunk.ID == data_structure_3ds.MAT_AMBIENT:
             helper_functions.read_chunk(file, temp_chunk)
-            if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
-                color = helper_functions.read_float_color(file, temp_chunk)
-                contextMaterial.diffuse_color = color + \
-                    [1.0]  # Adding alpha value as list
-            elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
-                color = read_byte_color(temp_chunk)
+
+            if temp_chunk.ID in [data_structure_3ds.MAT_FLOAT_COLOR, data_structure_3ds.MAT_24BIT_COLOR]:
+                color = helper_functions.read_float_color(
+                    file, temp_chunk) if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR else helper_functions.read_byte_color(file, temp_chunk)
                 contextMaterial.diffuse_color = color + \
                     [1.0]  # Adding alpha value as list
             else:
-                skip_to_end(file, temp_chunk)
+                helper_functions.skip_to_end(file, temp_chunk)
+
             new_chunk.bytes_read += temp_chunk.bytes_read
 
             if not contextMaterial.use_nodes:
@@ -248,14 +197,14 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
 
         elif new_chunk.ID == data_structure_3ds.MAT_DIFFUSE:
             helper_functions.read_chunk(file, temp_chunk)
-            if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
-                color = helper_functions.read_float_color(file, temp_chunk)
-                contextMaterial.diffuse_color = color + [1.0]  # Add alpha
-            elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
-                color = read_byte_color(temp_chunk)
+
+            if temp_chunk.ID in [data_structure_3ds.MAT_FLOAT_COLOR, data_structure_3ds.MAT_24BIT_COLOR]:
+                color = helper_functions.read_float_color(
+                    file, temp_chunk) if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR else helper_functions.read_byte_color(file, temp_chunk)
                 contextMaterial.diffuse_color = color + [1.0]  # Add alpha
             else:
-                skip_to_end(file, temp_chunk)
+                helper_functions.skip_to_end(file, temp_chunk)
+
             new_chunk.bytes_read += temp_chunk.bytes_read
 
             if not contextMaterial.use_nodes:
@@ -266,44 +215,44 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                 bsdf_node.inputs['Base Color'].default_value = contextMaterial.diffuse_color
 
         elif new_chunk.ID == data_structure_3ds.MAT_SPECULAR:
-            # print 'elif new_chunk.ID == MAT_SPECULAR:'
             helper_functions.read_chunk(file, temp_chunk)
-            if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR:
+
+            if temp_chunk.ID in [data_structure_3ds.MAT_FLOAT_COLOR, data_structure_3ds.MAT_24BIT_COLOR]:
                 contextMaterial.specular_color = helper_functions.read_float_color(
-                    file, temp_chunk)
-            elif temp_chunk.ID == data_structure_3ds.MAT_24BIT_COLOR:
-                contextMaterial.specular_color = read_byte_color(temp_chunk)
+                    file, temp_chunk) if temp_chunk.ID == data_structure_3ds.MAT_FLOAT_COLOR else helper_functions.read_byte_color(file, temp_chunk)
             else:
-                skip_to_end(file, temp_chunk)
+                helper_functions.skip_to_end(file, temp_chunk)
+
             new_chunk.bytes_read += temp_chunk.bytes_read
 
-        elif new_chunk.ID == data_structure_3ds.MAT_TEXTURE_MAP:
-            read_texture(new_chunk, temp_chunk, "Diffuse", "COLOR")
+        elif new_chunk.ID in [data_structure_3ds.MAT_TEXTURE_MAP, data_structure_3ds.MAT_SPECULAR_MAP,
+                              data_structure_3ds.MAT_OPACITY_MAP, data_structure_3ds.MAT_BUMP_MAP]:
 
-        elif new_chunk.ID == data_structure_3ds.MAT_SPECULAR_MAP:
-            read_texture(new_chunk, temp_chunk, "Specular", "SPECULARITY")
+            texture_id_map = {
+                data_structure_3ds.MAT_TEXTURE_MAP: ("Diffuse", "COLOR"),
+                data_structure_3ds.MAT_SPECULAR_MAP: ("Specular", "SPECULARITY"),
+                data_structure_3ds.MAT_OPACITY_MAP: ("Opacity", "ALPHA"),
+                data_structure_3ds.MAT_BUMP_MAP: ("Bump", "NORMAL"),
+            }
 
-        elif new_chunk.ID == data_structure_3ds.MAT_OPACITY_MAP:
-            read_texture(new_chunk, temp_chunk, "Opacity", "ALPHA")
-
-        elif new_chunk.ID == data_structure_3ds.MAT_BUMP_MAP:
-            read_texture(new_chunk, temp_chunk, "Bump", "NORMAL")
+            read_texture(new_chunk, temp_chunk, *texture_id_map[new_chunk.ID])
 
         elif new_chunk.ID == data_structure_3ds.MAT_TRANSPARENCY:
             helper_functions.read_chunk(file, temp_chunk)
 
             alpha_value = 1.0
-            if temp_chunk.ID == data_structure_3ds.PERCENTAGE_SHORT:
-                temp_data = file.read(
-                    localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT)
-                temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT
+            struct_map = {
+                data_structure_3ds.PERCENTAGE_SHORT: ('<H', localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT),
+                data_structure_3ds.PERCENTAGE_FLOAT: (
+                    'f', localspace_variable_names.STRUCT_SIZE_FLOAT)
+            }
+
+            if temp_chunk.ID in struct_map:
+                struct_format, struct_size = struct_map[temp_chunk.ID]
+                temp_data = file.read(struct_size)
+                temp_chunk.bytes_read += struct_size
                 alpha_value = 1 - \
-                    (float(struct.unpack('<H', temp_data)[0]) / 100)
-            elif temp_chunk.ID == data_structure_3ds.PERCENTAGE_FLOAT:
-                temp_data = file.read(
-                    localspace_variable_names.STRUCT_SIZE_FLOAT)
-                temp_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_FLOAT
-                alpha_value = 1 - float(struct.unpack('f', temp_data)[0])
+                    (float(struct.unpack(struct_format, temp_data)[0]) / 100)
             else:
                 print("Cannot read material transparency")
 
@@ -317,64 +266,41 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                 bsdf_node.inputs['Alpha'].default_value = alpha_value
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_LAMP:  # Basic lamp support.
-
-            temp_data = file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT)
-
-            x, y, z = struct.unpack('<3f', temp_data)
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT
-
-            # no lamp in dict that would be confusing
-            contextLamp[1] = bpy.data.lamps.new("Lamp", 'POINT')
-            contextLamp[0] = ob = bpy.data.objects.new("Lamp", contextLamp[1])
-
-            SCN.collection.objects.link(ob)
-            importedObjects.append(contextLamp[0])
-            contextLamp[0].location = x, y, z
-
+            contextLamp, new_chunk = helper_functions.create_lamp(file, contextLamp,
+                                                                  new_chunk, SCN, importedObjects)
             # Reset matrix
             contextMatrix_rot = None
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_MESH:
-            # print 'Found an OBJECT_MESH chunk'
             pass
         elif new_chunk.ID == data_structure_3ds.OBJECT_VERTICES:
-            """
-            Worldspace vertex locations
-            """
-            # print 'elif new_chunk.ID == OBJECT_VERTICES:'
+            # Worldspace vertex locations
             temp_data = file.read(
                 localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT)
             num_verts = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
 
-            # print 'number of verts: ', num_verts
+            read_size = localspace_variable_names.STRUCT_SIZE_3FLOAT * num_verts
             contextMesh_vertls = struct.unpack(
-                '<%df' % (num_verts * 3), file.read(localspace_variable_names.STRUCT_SIZE_3FLOAT * num_verts))
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_3FLOAT * num_verts
-            # dummyvert is not used atm!
-
-            # print 'object verts: bytes read: ', new_chunk.bytes_read
+                '<%df' % (num_verts * 3), file.read(read_size))
+            new_chunk.bytes_read += read_size
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_FACES:
-            # print 'elif new_chunk.ID == OBJECT_FACES:'
             temp_data = file.read(
                 localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT)
             num_faces = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
-            # print 'number of faces: ', num_faces
 
-            # print '\ngetting a face'
-            temp_data = file.read(
-                localspace_variable_names.STRUCT_SIZE_4UNSIGNED_SHORT * num_faces)
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_4UNSIGNED_SHORT * \
-                num_faces  # 4 short ints x 2 bytes each
+            read_size = localspace_variable_names.STRUCT_SIZE_4UNSIGNED_SHORT * num_faces
+            temp_data = file.read(read_size)
+            new_chunk.bytes_read += read_size
+
             contextMesh_facels = struct.unpack(
                 '<%dH' % (num_faces * 4), temp_data)
-            contextMesh_facels = [contextMesh_facels[i - 3:i]
-                                  for i in range(3, (num_faces * 4) + 3, 4)]
+            contextMesh_facels = [contextMesh_facels[i-3:i]
+                                  for i in range(3, len(contextMesh_facels) + 1, 4)]
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_MATERIAL:
-            # print 'elif new_chunk.ID == OBJECT_MATERIAL:'
             material_name, read_str_len = helper_functions.read_string(file)
             new_chunk.bytes_read += read_str_len  # remove 1 null character.
 
@@ -383,17 +309,14 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             num_faces_using_mat = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT
 
-            temp_data = file.read(
-                localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT * num_faces_using_mat)
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT * \
-                num_faces_using_mat
+            read_size = localspace_variable_names.STRUCT_SIZE_UNSIGNED_SHORT * num_faces_using_mat
+            temp_data = file.read(read_size)
+            new_chunk.bytes_read += read_size
 
-            temp_data = struct.unpack(
+            face_indices = struct.unpack(
                 "<%dH" % (num_faces_using_mat), temp_data)
 
-            contextMeshMaterials.append((material_name, temp_data))
-
-            # look up the material in all the materials
+            contextMeshMaterials.append((material_name, face_indices))
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_UV:
             temp_data = file.read(
@@ -401,50 +324,58 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
             num_uv = struct.unpack('<H', temp_data)[0]
             new_chunk.bytes_read += 2
 
-            temp_data = file.read(
-                localspace_variable_names.STRUCT_SIZE_2FLOAT * num_uv)
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_2FLOAT * num_uv
-            contextMeshUV = struct.unpack('<%df' % (num_uv * 2), temp_data)
+            read_size = localspace_variable_names.STRUCT_SIZE_2FLOAT * num_uv
+            temp_data = file.read(read_size)
+            new_chunk.bytes_read += read_size
+
+            uv_values = struct.unpack('<%df' % (num_uv * 2), temp_data)
+            contextMeshUV = uv_values
 
         elif new_chunk.ID == data_structure_3ds.OBJECT_TRANS_MATRIX:
             # How do we know the matrix size? 54 == 4x4 48 == 4x3
-            temp_data = file.read(localspace_variable_names.STRUCT_SIZE_4x3MAT)
+            matrix_size = localspace_variable_names.STRUCT_SIZE_4x3MAT
+            temp_data = file.read(matrix_size)
             data = list(struct.unpack('<ffffffffffff', temp_data))
-            new_chunk.bytes_read += localspace_variable_names.STRUCT_SIZE_4x3MAT
+            new_chunk.bytes_read += matrix_size
 
-            contextMatrix_rot = mathutils.Matrix((data[:3] + [0],
-                                                  data[3:6] + [0],
-                                                  data[6:9] + [0],
-                                                  data[9:] + [1],
-                                                  )).transposed()
+            row1 = data[:3] + [0]
+            row2 = data[3:6] + [0]
+            row3 = data[6:9] + [0]
+            row4 = data[9:] + [1]
+            contextMatrix_rot = mathutils.Matrix(
+                (row1, row2, row3, row4)).transposed()
 
-        elif (new_chunk.ID == data_structure_3ds.MAT_MAP_FILEPATH):
+        elif new_chunk.ID == data_structure_3ds.MAT_MAP_FILEPATH:
+            material_name = contextMaterial.name
             texture_name, read_str_len = helper_functions.read_string(file)
-            if contextMaterial.name not in textureDict:
-                textureDict[contextMaterial.name] = load_image(
+            if material_name not in textureDictionary:
+                texture = load_image(
                     texture_name, dirname, place_holder=False, recursive=IMAGE_SEARCH)
+                textureDictionary[material_name] = texture
+                print(
+                    f"Loaded texture {texture_name} for material {material_name}")
 
             # plus one for the null character that gets removed
             new_chunk.bytes_read += read_str_len
+
         elif new_chunk.ID == data_structure_3ds.EDITKEYFRAME:
             pass
 
-        # including these here means their EK_OB_NODE_HEADER are scanned
+        # Check if the chunk ID corresponds to any of the object node IDs.
+        # If so, we reset 'child' to None since we're about to process another object.
         elif new_chunk.ID in {data_structure_3ds.ED_KEY_AMBIENT_NODE,
                               data_structure_3ds.ED_KEY_OBJECT_NODE,
                               data_structure_3ds.ED_KEY_CAMERA_NODE,
                               data_structure_3ds.ED_KEY_TARGET_NODE,
                               data_structure_3ds.ED_KEY_LIGHT_NODE,
                               data_structure_3ds.ED_KEY_L_TARGET_NODE,
-                              data_structure_3ds.ED_KEY_SPOTLIGHT_NODE}:  # another object is being processed
+                              data_structure_3ds.ED_KEY_SPOTLIGHT_NODE}:
             child = None
 
         else:
-            # print 'skipping to end of this chunk'
-            # print("unknown chunk: "+hex(new_chunk.ID))
+            # Skip unidentified chunks by reading remaining bytes and discarding the data.
             buffer_size = new_chunk.length - new_chunk.bytes_read
-            binary_format = "%ic" % buffer_size
-            temp_data = file.read(struct.calcsize(binary_format))
+            file.read(buffer_size)
             new_chunk.bytes_read += buffer_size
 
         # update the previous chunk bytes read
@@ -458,26 +389,33 @@ def process_next_chunk(file, previous_chunk, importedObjects, IMAGE_SEARCH):
                        contextMeshMaterials)
 
     # Assign parents to objects
-    # check _if_ we need to assign first because doing so recalcs the depsgraph
-    for ind, ob in enumerate(object_list):
-        parent = object_parent[ind]
-        if parent == data_structure_3ds.ROOT_OBJECT:
-            if ob.parent is not None:
-                ob.parent = None
-        else:
-            # Avoid self-parenting and index out of range
-            if parent < len(object_list) and ob != object_list[parent]:
-                ob.parent = object_list[parent]
+    # Check if we need to assign parents first because doing so recalculates the dependencies graph
+    for index, current_object in enumerate(object_list):
+        parent_index = object_parent[index]
 
-    # fix pivots
-    for ind, ob in enumerate(object_list):
-        if ob.type == 'MESH':
-            pivot = pivot_list[ind]
-            pivot_matrix = OBJECT_MATRIX.get(
-                ob, mathutils.Matrix())  # unlikely to fail
-            pivot_matrix = mathutils.Matrix.Translation(
-                pivot_matrix.to_3x3() @ -pivot)
-            ob.data.transform(pivot_matrix)
+        if parent_index == data_structure_3ds.ROOT_OBJECT:
+            # Ensure that root objects have no parent
+            if current_object.parent is not None:
+                current_object.parent = None
+        else:
+            # Avoid self-parenting and index out of range errors
+            if parent_index < len(object_list) and current_object != object_list[parent_index]:
+                current_object.parent = object_list[parent_index]
+
+    # Adjust pivot points for each mesh object
+    for index, object in enumerate(object_list):
+        if object.type == 'MESH':
+            pivot = pivot_list[index]
+
+            # Get the object's matrix, defaulting to the identity matrix if not found
+            object_matrix = OBJECT_MATRIX.get(object, mathutils.Matrix())
+
+            # Create a translation matrix for the pivot adjustment
+            pivot_adjustment_matrix = mathutils.Matrix.Translation(
+                object_matrix.to_3x3() @ -pivot)
+
+            # Transform the object data using the pivot adjustment matrix
+            object.data.transform(pivot_adjustment_matrix)
 
 
 def load_3ds(filepath,
@@ -512,10 +450,6 @@ def load_3ds(filepath,
     # IMAGE_SEARCH
     importedObjects = []  # Fill this list with objects
     process_next_chunk(file, current_chunk, importedObjects, IMAGE_SEARCH)
-
-    # fixme, make unglobal, clear in case
-    OBJECT_DICTIONARY.clear()
-    OBJECT_MATRIX.clear()
 
     if APPLY_MATRIX:
         for ob in importedObjects:
